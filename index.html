@@ -570,7 +570,11 @@ async function submitForm(){
   }
   if(!name||name==="__new")return toast("Please select your name.",true);
   const week=document.getElementById("f-week").value;
-  const rec={name,week,ts:Date.now(),autoFilled:false,edited:false,recruit:collectRecruit(),sales:collectSales()};
+  const recruit=collectRecruit(), sales=collectSales();
+  // don't let a blank form overwrite good data with zeros
+  if(!recruit.connect&&!recruit.appt&&!recruit.referral&&!sales.connect&&!sales.appt&&!sales.referral&&!sales.plans.length)
+    return toast("Nothing to submit yet — please key in your numbers first.",true);
+  const rec={name,week,ts:Date.now(),autoFilled:false,edited:false,recruit,sales};
   save(K_PLANS,CUSTOM_PLANS);
   try{ await DB.upsert(rec); }
   catch(e){ return toast("Couldn't save: "+e.message,true); }
