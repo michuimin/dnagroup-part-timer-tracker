@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Part-Timer Weekly Tracker</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root{
+    --bg:#f6f4f1; --surface:#ffffff; --surface-2:#faf8f6; --ink:#1c1a19; --ink-2:#5c5651;
+    --line:#e7e2dc; --line-2:#d8d2ca;
+    --accent:#c8102e; --accent-ink:#ffffff; --accent-soft:#fbe9ec;
+    --recruit:#e0a800; --recruit-bg:#fdf6df; --recruit-line:#f0d98a; --recruit-head:#f7d84a;
+    --sales:#1f9d55; --sales-bg:#e9f7ee; --sales-line:#a9dcbd; --sales-head:#3cc27e;
+    --good:#1f9d55; --muted-chip:#efe9e2;
+    --shadow:0 1px 2px rgba(28,26,25,.06),0 8px 24px rgba(28,26,25,.06);
+    --radius:14px; --radius-sm:9px;
+    --mono:"SF Mono",ui-monospace,"Cascadia Mono","Roboto Mono",Menlo,monospace;
+    --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  :root[data-theme="dark"]{
+    --bg:#161412; --surface:#211e1b; --surface-2:#1b1917; --ink:#f2ede7; --ink-2:#a89f95;
+    --line:#332e29; --line-2:#413a34; --accent:#ff5a72; --accent-ink:#1a0d0f; --accent-soft:#3a1c22;
+    --recruit:#f2c94c; --recruit-bg:#2c2612; --recruit-line:#5c4e1f; --recruit-head:#5c4e12;
+    --sales:#4ad48b; --sales-bg:#123021; --sales-line:#1f5c3c; --sales-head:#12492f;
+    --good:#4ad48b; --muted-chip:#2c2723; --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.5;
+    -webkit-font-smoothing:antialiased;font-size:15px}
+  h1,h2,h3,h4{margin:0;text-wrap:balance;letter-spacing:-.01em}
+  .wrap{max-width:1200px;margin:0 auto;padding:0 20px}
+  .tnum{font-variant-numeric:tabular-nums}
+
+  header.top{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--surface) 90%,transparent);
+    backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  .top-in{display:flex;align-items:center;gap:16px;height:64px}
+  .brand{display:flex;align-items:center;gap:11px;font-weight:700;letter-spacing:-.02em}
+  .logo{width:30px;height:30px;border-radius:8px;background:var(--accent);color:var(--accent-ink);
+    display:grid;place-items:center;font-weight:800;font-size:15px;flex:none}
+  .brand small{display:block;font-weight:500;color:var(--ink-2);font-size:11.5px;letter-spacing:0}
+  .tabs{display:flex;gap:4px;margin-left:8px;background:var(--surface-2);border:1px solid var(--line);
+    padding:4px;border-radius:11px}
+  .tab{appearance:none;border:0;background:transparent;color:var(--ink-2);font:inherit;font-weight:600;
+    font-size:14px;padding:7px 15px;border-radius:8px;cursor:pointer;white-space:nowrap}
+  .tab[a-current="true"]{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+  .spacer{flex:1}
+  .theme-btn{appearance:none;border:1px solid var(--line);background:var(--surface);color:var(--ink-2);
+    width:38px;height:38px;border-radius:10px;cursor:pointer;font-size:16px;display:grid;place-items:center}
+  .theme-btn:hover{color:var(--ink)}
+
+  main{padding:26px 0 90px}
+  .page-head{margin-bottom:20px}
+  .page-head h1{font-size:26px}
+  .page-head p{margin:5px 0 0;color:var(--ink-2);font-size:14px;max-width:64ch}
+  .eyebrow{text-transform:uppercase;letter-spacing:.13em;font-size:11px;font-weight:700;color:var(--accent)}
+
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+  .field{display:flex;flex-direction:column;gap:6px}
+  .field label{font-size:12.5px;font-weight:650;color:var(--ink-2);letter-spacing:.01em}
+  .req{color:var(--accent)}
+  input,select{font:inherit;color:var(--ink);background:var(--surface-2);border:1px solid var(--line-2);
+    border-radius:var(--radius-sm);padding:10px 11px;width:100%;transition:border-color .12s,box-shadow .12s}
+  input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  input::placeholder{color:color-mix(in srgb,var(--ink-2) 70%,transparent)}
+  select{cursor:pointer}
+  input[readonly]{background:var(--muted-chip);cursor:default;font-weight:700}
+
+  .id-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:20px}
+  @media(max-width:640px){.id-grid{grid-template-columns:1fr}}
+
+  .sect{border-radius:var(--radius);border:1px solid var(--line);overflow:hidden;margin-top:18px;background:var(--surface)}
+  .sect-head{display:flex;align-items:center;gap:11px;padding:14px 18px;font-weight:750;font-size:16px}
+  .sect.recruit .sect-head{background:var(--recruit-bg);border-bottom:1px solid var(--recruit-line);color:var(--ink)}
+  .sect.sales .sect-head{background:var(--sales-bg);border-bottom:1px solid var(--sales-line);color:var(--ink)}
+  .sect-head .tag{margin-left:auto;font-size:12px;font-weight:500;color:var(--ink-2)}
+  .dot{width:11px;height:11px;border-radius:50%;flex:none}
+  .recruit .dot{background:var(--recruit)} .sales .dot{background:var(--sales)}
+  .sect-body{padding:18px}
+  .metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  @media(max-width:560px){.metrics{grid-template-columns:1fr}}
+
+  .afyc-block{margin-top:18px;border-top:1px dashed var(--line-2);padding-top:16px}
+  .afyc-title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+  .afyc-title h4{font-size:13.5px;font-weight:700}
+  .afyc-title .hint{font-size:12px;color:var(--ink-2);font-weight:500}
+
+  .plan-rows{display:flex;flex-direction:column;gap:10px}
+  .plan-row{display:grid;grid-template-columns:1.8fr 1fr 1fr .9fr .9fr auto;gap:10px;align-items:end;
+    background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px}
+  .plan-row .field label{font-size:11px}
+  @media(max-width:820px){.plan-row{grid-template-columns:1fr 1fr}}
+  .afyc-out{font-family:var(--mono);font-weight:700}
+  .rate-tag{grid-column:1/-1;font-size:11.5px;color:var(--ink-2);margin-top:-2px}
+  .rate-tag:empty{display:none}
+  .x5{color:var(--accent);font-weight:700}
+  .row-x{appearance:none;border:1px solid var(--line-2);background:var(--surface);color:var(--ink-2);
+    width:38px;height:40px;border-radius:9px;cursor:pointer;font-size:17px;line-height:1}
+  .row-x:hover{border-color:var(--accent);color:var(--accent)}
+  .custom-cat{grid-column:1/-1;display:none;gap:10px;grid-template-columns:1fr 2fr;align-items:end}
+  .custom-cat.on{display:grid}
+  .custom-cat .note{font-size:11.5px;color:var(--accent);align-self:center;font-weight:600}
+  @media(max-width:820px){.custom-cat.on{grid-template-columns:1fr}}
+
+  .btn{appearance:none;font:inherit;font-weight:650;border-radius:10px;cursor:pointer;padding:10px 16px;
+    border:1px solid var(--line-2);background:var(--surface);color:var(--ink);display:inline-flex;
+    align-items:center;gap:8px;transition:transform .06s,background .12s,border-color .12s}
+  .btn:hover{border-color:var(--ink-2)}
+  .btn:active{transform:translateY(1px)}
+  .btn.ghost-accent{border-color:var(--accent);color:var(--accent);background:transparent}
+  .btn.ghost-accent:hover{background:var(--accent-soft)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+  .btn.primary:hover{filter:brightness(1.05)}
+  .btn.big{padding:13px 26px;font-size:15.5px}
+  .btn.sm{padding:7px 12px;font-size:13px}
+  .btn.danger{border-color:var(--accent);color:var(--accent)}
+  .btn.danger:hover{background:var(--accent-soft)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+
+  .sect-total{display:flex;align-items:center;justify-content:flex-end;gap:22px;margin-top:14px;
+    font-size:14px;color:var(--ink-2);flex-wrap:wrap}
+  .sect-total b{font-family:var(--mono);font-size:17px;color:var(--ink);margin-left:8px}
+
+  .form-actions{display:flex;align-items:center;gap:14px;margin-top:24px;flex-wrap:wrap}
+  .form-actions .note{color:var(--ink-2);font-size:13px}
+
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);opacity:0;
+    background:var(--ink);color:var(--bg);padding:13px 20px;border-radius:11px;font-weight:600;
+    box-shadow:var(--shadow);transition:.25s;z-index:60;pointer-events:none;max-width:90vw}
+  .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+  .toast.err{background:var(--accent);color:var(--accent-ink)}
+
+  .filters{display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin-bottom:18px}
+  .filters .field{min-width:230px}
+  .stat-row{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:22px}
+  @media(max-width:900px){.stat-row{grid-template-columns:repeat(3,1fr)}}
+  @media(max-width:520px){.stat-row{grid-template-columns:repeat(2,1fr)}}
+  .stat{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 15px;box-shadow:var(--shadow)}
+  .stat .k{font-size:11.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-2);font-weight:700}
+  .stat .v{font-size:22px;font-weight:750;margin-top:6px;font-variant-numeric:tabular-nums}
+  .stat .s{font-size:12px;color:var(--ink-2);margin-top:2px}
+  .stat.recruit{border-top:3px solid var(--recruit)} .stat.sales{border-top:3px solid var(--sales)}
+  .stat.accent .v{color:var(--accent)}
+
+  .table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow)}
+  table.grid{border-collapse:collapse;width:100%;min-width:900px;font-size:13.5px}
+  table.grid th,table.grid td{padding:9px 11px;text-align:center;border-bottom:1px solid var(--line);
+    border-right:1px solid var(--line);white-space:nowrap}
+  table.grid tr th:last-child,table.grid tr td:last-child{border-right:0}
+  table.grid thead .grp{font-size:14px;font-weight:800;letter-spacing:.02em}
+  table.grid thead .grp.rec{background:var(--recruit-head);color:#3a2f00}
+  table.grid thead .grp.sal{background:var(--sales-head);color:#053018}
+  table.grid thead .grp.blank{background:var(--surface-2)}
+  table.grid thead .sub{background:var(--surface-2);font-size:12px;font-weight:700;color:var(--ink-2)}
+  table.grid td.agent,table.grid th.agent{text-align:left;font-weight:650;position:sticky;left:0;
+    background:var(--surface);z-index:1}
+  table.grid td.num{font-variant-numeric:tabular-nums}
+  table.grid tbody tr:nth-child(even) td{background:var(--surface-2)}
+  table.grid tbody tr:nth-child(even) td.agent{background:var(--surface-2)}
+  .afyc-cell{display:flex;flex-direction:column;gap:2px;align-items:center}
+  .afyc-cell .amt{font-weight:750;font-variant-numeric:tabular-nums}
+  .afyc-cell .plans{font-size:11px;color:var(--ink-2);white-space:normal;max-width:220px;line-height:1.35}
+  .cell-in{width:74px;padding:6px 7px;text-align:center;font-size:13px;font-variant-numeric:tabular-nums;background:var(--surface)}
+  .pill{display:inline-block;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:20px;letter-spacing:.02em}
+  .pill.done{background:var(--sales-bg);color:var(--sales);border:1px solid var(--sales-line)}
+  .pill.edit{background:var(--accent-soft);color:var(--accent);border:1px solid var(--accent)}
+  .pill.miss{background:var(--muted-chip);color:var(--ink-2);border:1px solid var(--line-2)}
+  .pill.auto{background:var(--recruit-bg);color:var(--recruit);border:1px solid var(--recruit-line)}
+  .del-x{appearance:none;border:1px solid var(--line-2);background:var(--surface);color:var(--ink-2);
+    width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:15px;line-height:1}
+  .del-x:hover{border-color:var(--accent);color:var(--accent)}
+  .dash-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:16px 0}
+  .dash-actions .spacer{flex:1}
+  .empty{padding:50px 20px;text-align:center;color:var(--ink-2)}
+  .empty h3{font-size:17px;color:var(--ink);margin-bottom:6px}
+  .totrow td{font-weight:800;background:var(--surface-2) !important;border-top:2px solid var(--line-2)}
+
+  .callout{display:flex;gap:12px;align-items:flex-start;background:var(--surface-2);border:1px solid var(--line);
+    border-left:3px solid var(--accent);border-radius:10px;padding:13px 15px;font-size:13px;color:var(--ink-2);margin-top:16px}
+  .callout b{color:var(--ink)}
+  .hide{display:none !important}
+  a.link{color:var(--accent);text-decoration:none;font-weight:600}
+  a.link:hover{text-decoration:underline}
+
+  /* ---------------- Mobile ---------------- */
+  @media(max-width:600px){
+    .wrap{padding:0 14px}
+    main{padding:18px 0 72px}
+    .top-in{height:auto;min-height:56px;flex-wrap:wrap;padding:9px 0;gap:9px}
+    .brand{flex:1;min-width:0}
+    .brand small{display:none}
+    .brand>div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .spacer{display:none}
+    .tabs{order:4;width:100%;margin-left:0}
+    .tab{flex:1;text-align:center}
+    input,select{font-size:16px}                 /* stops iOS zoom-on-focus */
+    .page-head h1{font-size:22px}
+    .page-head p{font-size:13.5px}
+    .id-grid{padding:16px}
+    .sect-body{padding:14px}
+    .sect-head{font-size:15px}
+    .sect-head .tag{display:none}
+    .afyc-title .hint{width:100%}
+    .plan-row{grid-template-columns:1fr 1fr;gap:9px 10px}
+    .sect-total{justify-content:space-between;gap:10px}
+    .form-actions{gap:10px}
+    .form-actions .btn.big{flex:1;justify-content:center}
+    .stat-row{gap:10px}
+    .stat .v{font-size:20px}
+    .filters .field{min-width:0;flex:1}
+    .dash-actions .btn{flex:1 1 auto;justify-content:center}
+  }
+  @media(max-width:390px){
+    .plan-row{grid-template-columns:1fr}
+    .stat-row{grid-template-columns:1fr 1fr}
+    .row-x{width:100%;height:36px}
+  }
+  @media(hover:none){ .row-x,.del-x,.tab,.btn{-webkit-tap-highlight-color:transparent} }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap top-in">
+    <div class="brand">
+      <div class="logo">A</div>
+      <div>Part-Timer Tracker<small>Weekly activity &amp; AFYC compilation</small></div>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Views">
+      <button class="tab" id="tab-form" a-current="true" onclick="showView('form')" role="tab">Agent Form</button>
+      <button class="tab" id="tab-dash" a-current="false" onclick="showView('dash')" role="tab">Dashboard</button>
+    </nav>
+    <div class="spacer"></div>
+    <button class="theme-btn" id="themeBtn" title="Toggle light / dark" aria-label="Toggle theme">☾</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- ============ FORM VIEW ============ -->
+  <section id="view-form">
+    <div class="page-head">
+      <div class="eyebrow">Weekly Submission</div>
+      <h1>Log this week's activity</h1>
+      <p>Pick your name and week, key in your numbers. For Sales, add the plans you closed — type to search a plan, key the annual premium, and ANP &amp; AFYC fill in automatically.</p>
+    </div>
+
+    <div class="card">
+      <div class="id-grid">
+        <div class="field">
+          <label for="f-name">Your name <span class="req">*</span></label>
+          <select id="f-name" onchange="onNameChange()"></select>
+          <input id="f-name-new" class="hide" placeholder="Type your name and it will be saved" oninput="onNewName()">
+        </div>
+        <div class="field">
+          <label for="f-week">Reporting week <span class="req">*</span></label>
+          <select id="f-week"></select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recruitment -->
+    <div class="sect recruit">
+      <div class="sect-head"><span class="dot"></span> Recruitment <span class="tag">People you recruited this week</span></div>
+      <div class="sect-body">
+        <div class="metrics">
+          <div class="field"><label>People connected</label><input type="number" min="0" step="1" id="r-connect" placeholder="0" class="tnum"></div>
+          <div class="field"><label>Appointments</label><input type="number" min="0" step="1" id="r-appt" placeholder="0" class="tnum"></div>
+          <div class="field"><label>Referrals</label><input type="number" min="0" step="1" id="r-ref" placeholder="0" class="tnum"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sales -->
+    <div class="sect sales">
+      <div class="sect-head"><span class="dot"></span> Sales</div>
+      <div class="sect-body">
+        <div class="metrics">
+          <div class="field"><label>People connected</label><input type="number" min="0" step="1" id="s-connect" placeholder="0" class="tnum"></div>
+          <div class="field"><label>Appointments</label><input type="number" min="0" step="1" id="s-appt" placeholder="0" class="tnum"></div>
+          <div class="field"><label>Referrals</label><input type="number" min="0" step="1" id="s-ref" placeholder="0" class="tnum"></div>
+        </div>
+        <div class="afyc-block">
+          <div class="afyc-title"><h4>Plans closed — ANP &amp; AFYC</h4><span class="hint">Type to search a plan · pick term · key annual premium</span></div>
+          <div class="plan-rows" id="s-plans"></div>
+          <div style="margin-top:12px"><button class="btn ghost-accent" onclick="addPlan()">+ Add plan</button></div>
+          <div class="sect-total">Total ANP <b class="tnum" id="s-anp">RM 0.00</b><span>Total AFYC <b class="tnum" id="s-total">RM 0.00</b></span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button class="btn primary big" onclick="submitForm()">Submit weekly activity</button>
+      <button class="btn" onclick="resetForm()">Clear form</button>
+      <span class="note" id="edit-note"></span>
+    </div>
+
+  </section>
+
+  <!-- ============ DASHBOARD VIEW ============ -->
+  <section id="view-dash" class="hide">
+    <div class="page-head">
+      <div class="eyebrow">Overview</div>
+      <h1>Dashboard</h1>
+      <p>Review everyone's numbers for the selected week. Edit any figure directly, remove agents, and export to Excel to update your master sheet.</p>
+    </div>
+
+    <div class="filters">
+      <div class="field">
+        <label for="d-week">Week</label>
+        <select id="d-week" onchange="renderDash()"></select>
+      </div>
+      <div class="field">
+        <label for="d-section">Show</label>
+        <select id="d-section" onchange="renderDash()">
+          <option value="both">Recruitment + Sales</option>
+          <option value="recruit">Recruitment only</option>
+          <option value="sales">Sales only</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="stat-row" id="stat-row"></div>
+
+    <div class="dash-actions" id="dash-actions"></div>
+
+    <div id="dash-body"></div>
+
+    <div class="callout">
+      <span>🕛</span>
+      <div><b>Auto-zero:</b> in the live team version a scheduled job runs every <b>Wednesday 12 am</b> and fills <b>0</b> for anyone who didn't submit that week.</div>
+    </div>
+  </section>
+</main>
+
+<datalist id="planlist"></datalist>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------------- DATA (decoded from AFYC Calculator.xlsx) ---------------- */
+const AGENTS = ["Yee Loon","Carol","Joshua","Howard","Kelvin","Shirley","Jake","Yen Wen","Arif","Michelle"];
+
+// category -> payment term -> commission rate (= 100% BSC rate + base rate from your calculator).
+// "Full Pay" = top tier (same as 20yr / regular). "SP" = single premium (saver 3%).
+const RATES = {
+  "A-Life Cover":         {"Full Pay":0.40,"20":0.40,"10":0.20,"5":0.1132,"SP":0.1132},
+  "A-Life Promise":       {"Full Pay":0.30,"20":0.30,"10":0.15,"5":0.1031,"SP":0.1031},
+  "Conventional":         {"Full Pay":0.25,"20":0.25,"10":0.125,"5":0.0763,"SP":0.03},
+  "A-Life MediFlex":      {"Full Pay":0.10,"20":0.10,"10":0.10,"5":0.10,"SP":0.10},
+  "A-Life Wealth Premier":{"Full Pay":0.10,"20":0.10,"10":0.10,"5":0.10,"SP":0.10},
+  "A-Enrich Wealth":      {"Full Pay":0.03,"20":0.03,"10":0.03,"5":0.03,"SP":0.03},
+  "AIA Infinite Heritage":{"Full Pay":0.03,"20":0.03,"10":0.03,"5":0.03,"SP":0.03}
+};
+const CATEGORIES = Object.keys(RATES);
+const TERMS = ["Full Pay","20","10","5","SP"];
+const TERM_LABEL = {"Full Pay":"Full Pay","20":"20 years","10":"10 years","5":"5 years","SP":"Single Premium"};
+
+// plan -> rate category (from Table sheet: product => rate category)
+const PLAN_CAT = {
+  "A-Life Rewards":"Conventional","A-Life Joy Xtra":"A-Life Cover","A-Life Cover":"A-Life Cover",
+  "A-Life Beyond Critical Care":"A-Life Cover","A-Life Essential Critical Care":"A-Life Cover",
+  "A-Life Cancer360":"A-Life Cover","A-Life Lady":"A-Life Cover","A-Life SuperJunior":"A-Life Cover",
+  "A-LifeSecure":"A-Life Cover","A-LifeTime Secure":"Conventional","Traditional (150)":"Conventional",
+  "A-Life Wealth Treasure":"A-Life Cover","A-Life Wealth Venture":"Conventional","A-Life Wealth Builder":"Conventional",
+  "A-Life Wealth Prestige":"A-Life Cover","A-Enrich20":"A-Life Cover","A-EnrichGold":"A-Life Cover",
+  "A-InvestLink":"Conventional","A-EduAchieve 2":"Conventional","A-Life Infinite":"Conventional",
+  "A-Life MediFlex":"A-Life MediFlex","Idaman Rider (Flat Comm)":"Conventional","Saver":"Conventional",
+  "A-LifeLink 2":"Conventional",
+  "AIA Infinite Heritage - SP":"AIA Infinite Heritage","AIA Infinite Prosperity - SP":"A-Enrich Wealth",
+  "AIA Infinite Khazanah":"A-Life Cover",
+  "A-Life Idaman":"Conventional","A-Life Legasi Beyond":"Conventional","A-Life Sejuta Makna":"A-Life Cover",
+  "A-Life Lady-i":"A-Life Cover","A-Life Kasih Famili":"A-Life Cover","A-Life Cancer360-i":"A-Life Cover",
+  "A-Life Kritikal Protector":"A-Life MediFlex","A-Life MediFlex-i":"A-Life Promise","A-Life Pelindung":"A-Life Cover",
+  "A-Life Sejahtera":"A-Life Cover","A-Life Kritikal Flex":"A-Life Cover","A-EnrichGold-i":"A-Life Cover",
+  "A-Enrich Rezeki":"Conventional","A-Enrich Rezeki Beyond":"A-Life Promise",
+  "A-Plus Health Flex-i":"A-Life Wealth Premier","A-Plus BabyCare Xtra-i":"A-Enrich Wealth"
+};
+const X5_PLANS = new Set(["A-Life Rewards"]); // 5x AFYC credit
+
+/* ---------------- STORAGE ---------------- */
+const K_SUB="ptw_sub_v2", K_CLOSED="ptw_closed_v2", K_NAMES="ptw_names_v2",
+      K_PLANS="ptw_plans_v2", K_REMOVED="ptw_removed_v2", K_THEME="ptw_theme_v2";
+const load=(k,d)=>{try{const v=JSON.parse(localStorage.getItem(k));return v==null?d:v}catch(e){return d}};
+const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+let SUB=load(K_SUB,{}), CLOSED=load(K_CLOSED,{}), CUSTOM_NAMES=load(K_NAMES,[]),
+    CUSTOM_PLANS=load(K_PLANS,{}), REMOVED=load(K_REMOVED,[]);
+let EDIT=false;
+
+function allNames(){return [...AGENTS,...CUSTOM_NAMES].filter((n,i,a)=>a.indexOf(n)===i && !REMOVED.includes(n));}
+function allPlans(){return {...PLAN_CAT,...CUSTOM_PLANS};}
+function planCat(name){return allPlans()[name]||null;}
+
+/* ---------------- WEEKS ---------------- */
+function mondayOf(d){const x=new Date(d);const day=(x.getDay()+6)%7;x.setDate(x.getDate()-day);x.setHours(0,0,0,0);return x;}
+function isoWeek(d){const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const dn=(t.getUTCDay()+6)%7;
+  t.setUTCDate(t.getUTCDate()-dn+3);const y0=new Date(Date.UTC(t.getUTCFullYear(),0,4));
+  return 1+Math.round(((t-y0)/86400000-3+((y0.getUTCDay()+6)%7))/7);}
+function fmtD(d){return String(d.getDate()).padStart(2,"0")+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+d.getFullYear();}
+function weekVal(mon){return mon.getFullYear()+"-"+String(mon.getMonth()+1).padStart(2,"0")+"-"+String(mon.getDate()).padStart(2,"0");}
+function weekLabel(mon){const sun=new Date(mon);sun.setDate(sun.getDate()+6);
+  return fmtD(mon)+" – "+fmtD(sun)+"  (Wk "+isoWeek(mon)+")";}
+function weekDeadline(mon){const d=new Date(mon);d.setDate(d.getDate()+9);d.setHours(0,0,0,0);return d;} // Wed 12am after week
+function weekList(){
+  const cur=mondayOf(new Date());const out=[];
+  for(let i=8;i>=-2;i--){const m=new Date(cur);m.setDate(m.getDate()-i*7);out.push(m);}
+  const have=new Set(out.map(weekVal));
+  Object.keys(SUB).forEach(v=>{if(!have.has(v)){out.push(new Date(v+"T00:00:00"));have.add(v);}});
+  out.sort((a,b)=>b-a);return out;
+}
+
+/* ---------------- CALC ---------------- */
+function calcANP(term,premium){return term==="SP"?premium*0.1:premium;}
+function calcRate(cat,term){const rt=RATES[cat];if(!rt)return 0;return rt[term]??rt["20"]??0;}
+function calcAFYC(plan,term,premium,catOverride){
+  const cat=catOverride||planCat(plan);
+  if(!cat||!premium)return {afyc:0,anp:0,rate:0,cat:cat||null,x5:false};
+  const rate=calcRate(cat,term);
+  let afyc=premium*rate; const x5=X5_PLANS.has(plan); if(x5)afyc*=5;
+  return {afyc,anp:calcANP(term,premium),rate,cat,x5};
+}
+const round2=n=>Math.round((n+Number.EPSILON)*100)/100;
+const money=n=>"RM "+round2(n).toLocaleString("en-MY",{minimumFractionDigits:2,maximumFractionDigits:2});
+const money0=n=>"RM "+Math.round(n).toLocaleString("en-MY");
+
+/* ---------------- FORM ---------------- */
+function fillNameSelect(){
+  const s=document.getElementById("f-name"),prev=s.value;
+  s.innerHTML='<option value="" disabled selected>Select your name…</option>'+
+    allNames().map(n=>`<option>${esc(n)}</option>`).join("")+
+    '<option value="__new">➕ Add my name…</option>';
+  if(prev&&[...s.options].some(o=>o.value===prev))s.value=prev;
+}
+function fillPlanList(){
+  document.getElementById("planlist").innerHTML=
+    Object.keys(allPlans()).sort().map(p=>`<option value="${esc(p)}">${esc(planCat(p))}</option>`).join("");
+}
+function fillWeekSelects(){
+  const opts=weekList().map(m=>`<option value="${weekVal(m)}">${esc(weekLabel(m))}</option>`).join("");
+  const cur=weekVal(mondayOf(new Date()));
+  const fw=document.getElementById("f-week");const fwp=fw.value;fw.innerHTML=opts;
+  fw.value=(fwp&&[...fw.options].some(o=>o.value===fwp))?fwp:cur;
+  const dw=document.getElementById("d-week");const dwp=dw.value;dw.innerHTML=opts;
+  dw.value=(dwp&&[...dw.options].some(o=>o.value===dwp))?dwp:cur;
+}
+function onNameChange(){
+  const s=document.getElementById("f-name"),ni=document.getElementById("f-name-new");
+  if(s.value==="__new"){ni.classList.remove("hide");ni.focus();}else{ni.classList.add("hide");}
+  loadExisting();
+}
+function onNewName(){}
+
+function planRowHTML(data){
+  data=data||{};
+  const isCustom=data.plan&&!PLAN_CAT[data.plan]&&(CUSTOM_PLANS[data.plan]||data.cat);
+  return `<div class="plan-row">
+    <div class="field"><label>Insurance plan</label>
+      <input class="pr-plan" list="planlist" placeholder="Type to search…" value="${esc(data.plan||'')}" oninput="onPlanInput(this)" autocomplete="off"></div>
+    <div class="field"><label>Payment term</label>
+      <select class="pr-term" onchange="recompute()">${TERMS.map(t=>`<option value="${t}" ${data.term===t?'selected':''}>${esc(TERM_LABEL[t])}</option>`).join("")}</select></div>
+    <div class="field"><label>Annual premium (RM)</label>
+      <input class="pr-prem tnum" type="number" min="0" step="0.01" placeholder="0.00" value="${data.premium??''}" oninput="recompute()"></div>
+    <div class="field"><label>ANP (RM)</label><input class="pr-anp afyc-out" readonly value="0.00"></div>
+    <div class="field"><label>AFYC (RM)</label><input class="pr-afyc afyc-out" readonly value="0.00"></div>
+    <button class="row-x" title="Remove plan" onclick="this.closest('.plan-row').remove();recompute()">×</button>
+    <div class="rate-tag"></div>
+    <div class="custom-cat ${isCustom?'on':''}">
+      <div class="field"><label>Rate category (new plan)</label>
+        <select class="pr-cat" onchange="recompute()">${CATEGORIES.map(c=>`<option ${data.cat===c?'selected':''}>${esc(c)}</option>`).join("")}</select></div>
+      <div class="note">New plan — pick its rate category so AFYC can be calculated. It'll be saved for next time.</div>
+    </div>
+  </div>`;
+}
+function addPlan(data){
+  document.getElementById("s-plans").insertAdjacentHTML("beforeend",planRowHTML(data));
+  recompute();
+}
+function onPlanInput(inp){
+  const row=inp.closest(".plan-row");
+  const val=inp.value.trim();
+  const known=!!PLAN_CAT[val]||!!CUSTOM_PLANS[val];
+  row.querySelector(".custom-cat").classList.toggle("on", val.length>0 && !known);
+  recompute();
+}
+function readRow(row){
+  const plan=row.querySelector(".pr-plan").value.trim();
+  const term=row.querySelector(".pr-term").value;
+  const premium=parseFloat(row.querySelector(".pr-prem").value)||0;
+  const known=PLAN_CAT[plan]||CUSTOM_PLANS[plan];
+  const cat=known?planCat(plan):row.querySelector(".pr-cat").value;
+  return {plan,term,premium,cat,known:!!known};
+}
+function recompute(){
+  let anpT=0,afycT=0;
+  document.querySelectorAll("#s-plans .plan-row").forEach(row=>{
+    const r=readRow(row);
+    const {afyc,anp,rate,x5}=calcAFYC(r.plan,r.term,r.premium,r.cat);
+    row.querySelector(".pr-anp").value=anp?round2(anp).toLocaleString("en-MY",{minimumFractionDigits:2}):"0.00";
+    row.querySelector(".pr-afyc").value=afyc?round2(afyc).toLocaleString("en-MY",{minimumFractionDigits:2}):"0.00";
+    const tag=row.querySelector(".rate-tag");
+    if(r.cat&&r.premium){tag.innerHTML=`${esc(r.cat)} · ${(rate*100).toFixed(2).replace(/\.00$/,'')}%`+(x5?` <span class="x5">×5 A-Life Rewards</span>`:``);}
+    else tag.textContent="";
+    anpT+=anp;afycT+=afyc;
+  });
+  document.getElementById("s-anp").textContent=money(anpT);
+  document.getElementById("s-total").textContent=money(afycT);
+}
+
+/* ---------------- SUBMIT ---------------- */
+function collectSales(){
+  const plans=[];
+  document.querySelectorAll("#s-plans .plan-row").forEach(row=>{
+    const r=readRow(row); if(!r.plan||!r.premium)return;
+    const {afyc,anp,rate,cat,x5}=calcAFYC(r.plan,r.term,r.premium,r.cat);
+    if(!r.known&&r.plan){CUSTOM_PLANS[r.plan]=r.cat;}
+    plans.push({plan:r.plan,term:r.term,premium:r.premium,anp:round2(anp),afyc:round2(afyc),rate,cat,x5});
+  });
+  const num=id=>Math.max(0,parseInt(document.getElementById(id).value||"0",10)||0);
+  return {connect:num("s-connect"),appt:num("s-appt"),referral:num("s-ref"),plans,
+    anp:round2(plans.reduce((a,p)=>a+p.anp,0)),afyc:round2(plans.reduce((a,p)=>a+p.afyc,0))};
+}
+function collectRecruit(){
+  const num=id=>Math.max(0,parseInt(document.getElementById(id).value||"0",10)||0);
+  return {connect:num("r-connect"),appt:num("r-appt"),referral:num("r-ref")};
+}
+function submitForm(){
+  const nsel=document.getElementById("f-name");let name=nsel.value;
+  if(name==="__new"){name=document.getElementById("f-name-new").value.trim();
+    if(!name)return toast("Please type your name.",true);
+    if(!allNames().includes(name)){CUSTOM_NAMES.push(name);REMOVED=REMOVED.filter(n=>n!==name);
+      save(K_NAMES,CUSTOM_NAMES);save(K_REMOVED,REMOVED);}
+  }
+  if(!name||name==="__new")return toast("Please select your name.",true);
+  const week=document.getElementById("f-week").value;
+  const rec={name,week,ts:Date.now(),autoFilled:false,edited:false,recruit:collectRecruit(),sales:collectSales()};
+  SUB[week]=SUB[week]||{};SUB[week][name]=rec;
+  save(K_SUB,SUB);save(K_PLANS,CUSTOM_PLANS);
+  fillNameSelect();fillPlanList();nsel.value=name;
+  toast("✓ Submitted for "+name);
+  document.getElementById("edit-note").textContent="Saved. Re-submitting overwrites this week's entry.";
+}
+function loadExisting(){
+  const name=document.getElementById("f-name").value,week=document.getElementById("f-week").value;
+  const note=document.getElementById("edit-note");
+  if(name&&name!=="__new"&&SUB[week]&&SUB[week][name]&&!SUB[week][name].autoFilled){
+    fillForm(SUB[week][name]);note.textContent="Editing an existing submission for this week.";
+  }else note.textContent="";
+}
+function fillForm(rec){
+  document.getElementById("r-connect").value=rec.recruit.connect||"";
+  document.getElementById("r-appt").value=rec.recruit.appt||"";
+  document.getElementById("r-ref").value=rec.recruit.referral||"";
+  document.getElementById("s-connect").value=rec.sales.connect||"";
+  document.getElementById("s-appt").value=rec.sales.appt||"";
+  document.getElementById("s-ref").value=rec.sales.referral||"";
+  const box=document.getElementById("s-plans");box.innerHTML="";
+  (rec.sales.plans||[]).forEach(p=>addPlan({plan:p.plan,term:p.term,premium:p.premium,cat:p.cat}));
+  if(!(rec.sales.plans||[]).length)addPlan();
+  recompute();
+}
+function resetForm(){
+  ["r-connect","r-appt","r-ref","s-connect","s-appt","s-ref"].forEach(id=>document.getElementById(id).value="");
+  document.getElementById("s-plans").innerHTML="";addPlan();
+  document.getElementById("edit-note").textContent="";recompute();
+}
+
+/* ---------------- DASHBOARD ---------------- */
+function recordsFor(week){const map=SUB[week]||{};return allNames().map(n=>({name:n,rec:map[n]||null}));}
+function dashTotals(rows){
+  const T={rc:0,ra:0,rf:0,sc:0,sa:0,sf:0,sanp:0,safyc:0};
+  rows.forEach(({rec})=>{if(!rec)return;const r=rec.recruit,s=rec.sales;
+    T.rc+=r.connect;T.ra+=r.appt;T.rf+=r.referral;
+    T.sc+=s.connect;T.sa+=s.appt;T.sf+=s.referral;T.sanp+=s.anp;T.safyc+=s.afyc;});
+  return T;
+}
+function renderDash(){
+  if(!EDIT)runAutoZero(false);
+  const week=document.getElementById("d-week").value;
+  const mode=document.getElementById("d-section").value;
+  const rows=recordsFor(week),T=dashTotals(rows);
+  const submitted=rows.filter(r=>r.rec&&!r.rec.autoFilled).length;
+  const auto=rows.filter(r=>r.rec&&r.rec.autoFilled).length;
+  const miss=rows.filter(r=>!r.rec).length;
+
+  const stat=(cls,k,v,s)=>`<div class="stat ${cls}"><div class="k">${k}</div><div class="v tnum">${v}</div><div class="s">${s||""}</div></div>`;
+  document.getElementById("stat-row").innerHTML=
+    stat("accent","Submitted",submitted+" / "+allNames().length, miss?(miss+" missing"+(auto?", "+auto+" auto":"")):(auto?auto+" auto-zeroed":"all in"))+
+    stat("recruit","Recruit connect",T.rc,"appointments "+T.ra)+
+    stat("recruit","Recruit referrals",T.rf,"new recruits reached")+
+    stat("sales","Sales connect",T.sc,"appointments "+T.sa)+
+    stat("sales","Sales ANP",money0(T.sanp),"annualised premium")+
+    stat("sales","Sales AFYC",money0(T.safyc),"referrals "+T.sf);
+
+  document.getElementById("dash-actions").innerHTML= EDIT
+    ? `<button class="btn primary" onclick="saveEdits()">✓ Save changes</button><button class="btn" onclick="cancelEdits()">Cancel</button><span class="spacer"></span><span class="note" style="color:var(--ink-2);font-size:13px">Editing — change any number, use 🗑 to remove an agent.</span>`
+    : `<button class="btn" onclick="startEdit()">✎ Edit table</button><button class="btn" onclick="runAutoZero(true)" title="Simulates the Wednesday 12am job">↺ Run auto-zero</button><span class="spacer"></span><button class="btn" onclick="exportCSV()">⬇︎ CSV</button><button class="btn primary" onclick="exportExcel()">⬇︎ Download Excel</button>`;
+
+  const showR=mode!=="sales",showS=mode!=="recruit";
+  if(!EDIT && !rows.some(r=>r.rec)){
+    document.getElementById("dash-body").innerHTML=
+      `<div class="table-wrap"><div class="empty"><h3>No submissions yet for this week</h3>
+      <p>Ask the team to fill the <a class="link" href="#" onclick="showView('form');return false">Agent Form</a>, or run the auto-zero check to zero-fill everyone.</p></div></div>`;
+    return;
+  }
+  const afycCell=(s)=>{
+    if(!s.plans||!s.plans.length)return `<div class="afyc-cell"><span class="amt">${s.afyc?money0(s.afyc):'—'}</span></div>`;
+    return `<div class="afyc-cell"><span class="amt">${money0(s.afyc)}</span><span class="plans">${esc(s.plans.map(p=>abbr(p.plan)+" "+Math.round(p.afyc)).join(", "))}</span></div>`;
+  };
+  const recCols=showR?4:0, salCols=showS?6:0;
+  let head=`<thead>
+    <tr><th class="agent grp blank" rowspan="2">Agent</th>${showR?'<th class="grp rec" colspan="3">Recruitment</th>':''}${showS?'<th class="grp sal" colspan="5">Sales</th>':''}<th class="grp blank" rowspan="2">${EDIT?'Remove':'Status'}</th></tr>
+    <tr>${showR?'<th class="sub">Connect</th><th class="sub">Appt</th><th class="sub">Referral</th>':''}${showS?'<th class="sub">Connect</th><th class="sub">Appt</th><th class="sub">ANP</th><th class="sub">AFYC</th><th class="sub">Referral</th>':''}</tr></thead>`;
+
+  let body="<tbody>";
+  rows.forEach(({name,rec})=>{
+    const r=rec?rec.recruit:null,s=rec?rec.sales:null;
+    if(EDIT){
+      const inp=(field,val)=>`<td><input class="cell-in tnum" type="number" min="0" step="1" data-name="${esc(name)}" data-f="${field}" value="${rec?val:0}"></td>`;
+      const inpMoney=(field,val)=>`<td><input class="cell-in tnum" type="number" min="0" step="0.01" data-name="${esc(name)}" data-f="${field}" value="${rec?Math.round(val):0}"></td>`;
+      body+=`<tr><td class="agent">${esc(name)}</td>`+
+        (showR?inp("r.connect",r?r.connect:0)+inp("r.appt",r?r.appt:0)+inp("r.referral",r?r.referral:0):'')+
+        (showS?inp("s.connect",s?s.connect:0)+inp("s.appt",s?s.appt:0)+inpMoney("s.anp",s?s.anp:0)+inpMoney("s.afyc",s?s.afyc:0)+inp("s.referral",s?s.referral:0):'')+
+        `<td><button class="del-x" title="Remove agent ${esc(name)}" onclick="deleteAgent('${esc(name).replace(/'/g,"\\'")}')">🗑</button></td></tr>`;
+    }else{
+      const status=!rec?'<span class="pill miss">not submitted</span>':(rec.autoFilled?'<span class="pill auto">0 · auto</span>':(rec.edited?'<span class="pill edit">edited</span>':'<span class="pill done">submitted</span>'));
+      const cell=v=>`<td class="num">${rec?v:'—'}</td>`;
+      body+=`<tr><td class="agent">${esc(name)}</td>`+
+        (showR?cell(r?r.connect:'')+cell(r?r.appt:'')+cell(r?r.referral:''):'')+
+        (showS?cell(s?s.connect:'')+cell(s?s.appt:'')+cell(s?money0(s.anp):'')+`<td>${rec?afycCell(s):'—'}</td>`+cell(s?s.referral:''):'')+
+        `<td>${status}</td></tr>`;
+    }
+  });
+  body+=`<tr class="totrow"><td class="agent">TOTAL</td>`+
+    (showR?`<td class="num">${T.rc}</td><td class="num">${T.ra}</td><td class="num">${T.rf}</td>`:'')+
+    (showS?`<td class="num">${T.sc}</td><td class="num">${T.sa}</td><td class="num">${money0(T.sanp)}</td><td class="num">${money0(T.safyc)}</td><td class="num">${T.sf}</td>`:'')+
+    `<td></td></tr></tbody>`;
+  document.getElementById("dash-body").innerHTML=`<div class="table-wrap"><table class="grid">${head}${body}</table></div>`;
+}
+function abbr(p){
+  const known={"A-LifeLink 2":"ALL2","A-Life MediFlex":"ALMF","A-Life Wealth Builder":"ALWB","A-Life Cover":"ALC","A-Life Rewards":"ALR"};
+  if(known[p])return known[p];
+  const parts=String(p).replace(/-/g," ").split(/\s+/).filter(Boolean);
+  return parts.length<=1?p:parts.map(w=>w[0]).join("").toUpperCase().slice(0,5);
+}
+
+/* ---------------- EDIT / DELETE ---------------- */
+function startEdit(){EDIT=true;renderDash();}
+function cancelEdits(){EDIT=false;renderDash();}
+function saveEdits(){
+  const week=document.getElementById("d-week").value;
+  const map=SUB[week]=SUB[week]||{};
+  // group the edited cells by agent
+  const byAgent={};
+  document.querySelectorAll("#dash-body .cell-in").forEach(inp=>{
+    const name=inp.dataset.name,[secShort,field]=inp.dataset.f.split(".");
+    const sec=secShort==="r"?"recruit":"sales";
+    const val=(field==="anp"||field==="afyc")?round2(Math.max(0,parseFloat(inp.value)||0)):Math.round(Math.max(0,parseFloat(inp.value)||0));
+    (byAgent[name]=byAgent[name]||[]).push({sec,field,val});
+  });
+  let changed=0;
+  Object.keys(byAgent).forEach(name=>{
+    const fields=byAgent[name], existing=map[name];
+    // is this row different from what's already stored (or from all-zero if no record)?
+    let diff=false, anyNonZero=false;
+    fields.forEach(({sec,field,val})=>{
+      if(val>0) anyNonZero=true;
+      const cur=existing&&existing[sec]?(existing[sec][field]||0):0;
+      if(Math.abs(val-cur)>0.005) diff=true;
+    });
+    // untouched agent with no record → leave as "not submitted"
+    if(!existing && !anyNonZero) return;
+    // existing record, nothing changed → leave its status (submitted / auto / edited) alone
+    if(existing && !diff) return;
+    // otherwise apply this row's values and mark it edited
+    const rec=existing||{name,week,ts:Date.now(),autoFilled:false,edited:true,
+      recruit:{connect:0,appt:0,referral:0},sales:{connect:0,appt:0,referral:0,plans:[],anp:0,afyc:0}};
+    fields.forEach(({sec,field,val})=>{rec[sec][field]=val;});
+    rec.autoFilled=false; rec.edited=true;
+    map[name]=rec; changed++;
+  });
+  save(K_SUB,SUB);EDIT=false;renderDash();
+  toast(changed?`✓ Saved — ${changed} row${changed>1?'s':''} updated`:"No changes to save");
+}
+function deleteAgent(name){
+  if(!confirm('Remove "'+name+'" completely?\n\nThis deletes them from the roster and all their weekly submissions.'))return;
+  CUSTOM_NAMES=CUSTOM_NAMES.filter(n=>n!==name);
+  if(AGENTS.includes(name)&&!REMOVED.includes(name))REMOVED.push(name);
+  Object.keys(SUB).forEach(w=>{if(SUB[w])delete SUB[w][name];});
+  save(K_NAMES,CUSTOM_NAMES);save(K_REMOVED,REMOVED);save(K_SUB,SUB);
+  fillNameSelect();renderDash();toast('Removed '+name);
+}
+
+/* ---------------- AUTO-ZERO ---------------- */
+function runAutoZero(announce){
+  const now=new Date();let filled=0,weeksClosed=0;
+  weekList().forEach(mon=>{
+    const v=weekVal(mon);if(CLOSED[v])return;
+    if(now>=weekDeadline(mon)){
+      const map=SUB[v]=SUB[v]||{};
+      allNames().forEach(n=>{if(!map[n]){map[n]=zeroRecord(n,v);filled++;}});
+      CLOSED[v]=true;weeksClosed++;
+    }
+  });
+  if(weeksClosed){save(K_SUB,SUB);save(K_CLOSED,CLOSED);}
+  if(announce){fillWeekSelects();renderDash();
+    toast(filled?`Auto-zero: filled 0 for ${filled} missing entr${filled>1?'ies':'y'} across ${weeksClosed} week${weeksClosed>1?'s':''}.`
+      :"Auto-zero check done — no past weeks needed zero-filling.");}
+}
+function zeroRecord(name,week){return {name,week,ts:Date.now(),autoFilled:true,edited:false,
+  recruit:{connect:0,appt:0,referral:0},sales:{connect:0,appt:0,referral:0,plans:[],anp:0,afyc:0}};}
+
+/* ---------------- EXPORT ---------------- */
+function planStr(s){return (s.plans||[]).map(p=>abbr(p.plan)+" "+Math.round(p.afyc)).join(", ");}
+function exportCSV(){
+  const week=document.getElementById("d-week").value,rows=recordsFor(week);
+  const wl=weekLabel(new Date(week+"T00:00:00"));
+  let csv=`Week,${csvq(wl)}\n\nAgent,Recruit Connect,Recruit Appt,Recruit Referral,Sales Connect,Sales Appt,Sales ANP,Sales AFYC,Sales Plans,Sales Referral,Status\n`;
+  rows.forEach(({name,rec})=>{
+    const r=rec?rec.recruit:null,s=rec?rec.sales:null;
+    const st=!rec?"Not submitted":(rec.autoFilled?"Auto-zero":(rec.edited?"Edited":"Submitted"));
+    const v=x=>rec?x:0;
+    csv+=[csvq(name),v(r?r.connect:0),v(r?r.appt:0),v(r?r.referral:0),
+      v(s?s.connect:0),v(s?s.appt:0),v(s?Math.round(s.anp):0),v(s?Math.round(s.afyc):0),csvq(s?planStr(s):""),v(s?s.referral:0),st].join(",")+"\n";
+  });
+  dl(csv,"PartTimer_"+week+".csv","text/csv;charset=utf-8;");
+}
+const csvq=s=>{s=String(s??"");return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;};
+
+function exportExcel(){
+  const week=document.getElementById("d-week").value,rows=recordsFor(week),T=dashTotals(rows);
+  const wl=weekLabel(new Date(week+"T00:00:00"));
+  const cN=(v,st)=>`<Cell${st?` ss:StyleID="${st}"`:''}><Data ss:Type="Number">${v||0}</Data></Cell>`;
+  const cS=(v,st)=>`<Cell${st?` ss:StyleID="${st}"`:''}><Data ss:Type="String">${xml(v)}</Data></Cell>`;
+  const r1=`<Row ss:Height="22"><Cell ss:StyleID="wk"><Data ss:Type="String">${xml(wl)}</Data></Cell>`+
+    `<Cell ss:MergeAcross="2" ss:StyleID="recH"><Data ss:Type="String">Recruitment</Data></Cell>`+
+    `<Cell ss:MergeAcross="4" ss:StyleID="salH"><Data ss:Type="String">Sales</Data></Cell>`+
+    `<Cell ss:StyleID="hd"><Data ss:Type="String">Status</Data></Cell></Row>`;
+  const sub=`<Row><Cell ss:StyleID="hd"><Data ss:Type="String">Agent</Data></Cell>`+
+    ["Connect","Appt","Referral","Connect","Appt","ANP","AFYC","Referral"].map(h=>`<Cell ss:StyleID="hd"><Data ss:Type="String">${h}</Data></Cell>`).join("")+
+    `<Cell ss:StyleID="hd"><Data ss:Type="String"> </Data></Cell></Row>`;
+  let bodyR="";
+  rows.forEach(({name,rec})=>{
+    const r=rec?rec.recruit:null,s=rec?rec.sales:null;
+    const st=!rec?"Not submitted":(rec.autoFilled?"Auto-zero":(rec.edited?"Edited":"Submitted"));
+    const stStyle=!rec?"stMiss":(rec.autoFilled?"stAuto":"stDone");
+    bodyR+=`<Row><Cell ss:StyleID="ag"><Data ss:Type="String">${xml(name)}</Data></Cell>`+
+      cN(r?r.connect:0)+cN(r?r.appt:0)+cN(r?r.referral:0)+
+      cN(s?s.connect:0)+cN(s?s.appt:0)+cN(s?Math.round(s.anp):0,"money")+cN(s?Math.round(s.afyc):0,"money")+cN(s?s.referral:0)+
+      `<Cell ss:StyleID="${stStyle}"><Data ss:Type="String">${st}</Data></Cell></Row>`;
+  });
+  const totR=`<Row><Cell ss:StyleID="tot"><Data ss:Type="String">TOTAL</Data></Cell>`+
+    cN(T.rc,"tot")+cN(T.ra,"tot")+cN(T.rf,"tot")+
+    cN(T.sc,"tot")+cN(T.sa,"tot")+cN(Math.round(T.sanp),"totMoney")+cN(Math.round(T.safyc),"totMoney")+cN(T.sf,"tot")+
+    `<Cell ss:StyleID="tot"><Data ss:Type="String"> </Data></Cell></Row>`;
+  const brk=rows.filter(({rec})=>rec&&(rec.sales.plans||[]).length).map(({name,rec})=>
+    `<Row><Cell ss:StyleID="ag"><Data ss:Type="String">${xml(name)}</Data></Cell>`+
+    `<Cell ss:MergeAcross="7"><Data ss:Type="String">${xml(planStr(rec.sales))}</Data></Cell></Row>`).join("");
+  const note=brk?`<Row></Row><Row><Cell ss:StyleID="note"><Data ss:Type="String">Sales AFYC plan breakdown</Data></Cell></Row>${brk}`:"";
+
+  const doc=`<?xml version="1.0"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+<Styles>
+ <Style ss:ID="Default"><Alignment ss:Vertical="Center"/><Font ss:FontName="Calibri" ss:Size="11"/></Style>
+ <Style ss:ID="wk"><Font ss:Bold="1"/><Alignment ss:Horizontal="Left" ss:Vertical="Center"/></Style>
+ <Style ss:ID="recH"><Font ss:Bold="1" ss:Size="12"/><Alignment ss:Horizontal="Center"/><Interior ss:Color="#F7D84A" ss:Pattern="Solid"/></Style>
+ <Style ss:ID="salH"><Font ss:Bold="1" ss:Size="12"/><Alignment ss:Horizontal="Center"/><Interior ss:Color="#3CC27E" ss:Pattern="Solid"/></Style>
+ <Style ss:ID="hd"><Font ss:Bold="1"/><Alignment ss:Horizontal="Center"/><Interior ss:Color="#EFEAE3" ss:Pattern="Solid"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous"/><Border ss:Position="Top" ss:LineStyle="Continuous"/></Borders></Style>
+ <Style ss:ID="ag"><Font ss:Bold="1"/><Alignment ss:Horizontal="Left"/></Style>
+ <Style ss:ID="money"><NumberFormat ss:Format="&quot;RM&quot;#,##0"/><Alignment ss:Horizontal="Center"/></Style>
+ <Style ss:ID="tot"><Font ss:Bold="1"/><Interior ss:Color="#EFEAE3" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center"/></Style>
+ <Style ss:ID="totMoney"><Font ss:Bold="1"/><Interior ss:Color="#EFEAE3" ss:Pattern="Solid"/><NumberFormat ss:Format="&quot;RM&quot;#,##0"/><Alignment ss:Horizontal="Center"/></Style>
+ <Style ss:ID="stDone"><Font ss:Color="#1F7A45"/><Alignment ss:Horizontal="Center"/></Style>
+ <Style ss:ID="stAuto"><Font ss:Color="#9A7A00"/><Alignment ss:Horizontal="Center"/></Style>
+ <Style ss:ID="stMiss"><Font ss:Color="#9A9A9A"/><Alignment ss:Horizontal="Center"/></Style>
+ <Style ss:ID="note"><Font ss:Bold="1" ss:Size="12"/></Style>
+</Styles>
+<Worksheet ss:Name="Weekly">
+ <Table>
+  <Column ss:Width="92"/><Column ss:Width="60"/><Column ss:Width="54"/><Column ss:Width="60"/><Column ss:Width="60"/><Column ss:Width="54"/><Column ss:Width="74"/><Column ss:Width="74"/><Column ss:Width="60"/><Column ss:Width="86"/>
+  ${r1}${sub}${bodyR}${totR}${note}
+ </Table>
+</Worksheet>
+</Workbook>`;
+  dl(doc,"PartTimer_"+week+".xls","application/vnd.ms-excel");
+}
+const xml=s=>String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+function dl(content,fname,mime){
+  const blob=new Blob([content],{type:mime||"application/octet-stream"});
+  const url=URL.createObjectURL(blob),a=document.createElement("a");
+  a.href=url;a.download=fname;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1500);toast("Downloaded "+fname);
+}
+
+/* ---------------- UI ---------------- */
+function esc(s){return String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+let toastT;
+function toast(msg,err){const t=document.getElementById("toast");t.textContent=msg;t.className="toast on"+(err?" err":"");
+  clearTimeout(toastT);toastT=setTimeout(()=>t.className="toast",2600);}
+function showView(v){
+  EDIT=false;
+  document.getElementById("view-form").classList.toggle("hide",v!=="form");
+  document.getElementById("view-dash").classList.toggle("hide",v!=="dash");
+  document.getElementById("tab-form").setAttribute("a-current",v==="form");
+  document.getElementById("tab-dash").setAttribute("a-current",v==="dash");
+  if(v==="dash")renderDash();
+}
+function applyTheme(t){document.documentElement.setAttribute("data-theme",t);
+  document.getElementById("themeBtn").textContent=t==="dark"?"☀":"☾";save(K_THEME,t);}
+document.getElementById("themeBtn").onclick=()=>{
+  const cur=document.documentElement.getAttribute("data-theme")||"light";
+  applyTheme(cur==="dark"?"light":"dark");
+};
+
+/* ---------------- INIT ---------------- */
+(function init(){
+  applyTheme(load(K_THEME,"light"));           // default = light background
+  fillNameSelect();fillPlanList();fillWeekSelects();
+  document.getElementById("f-week").addEventListener("change",loadExisting);
+  addPlan();
+  runAutoZero(false);
+})();
+</script>
+</body>
+</html>
