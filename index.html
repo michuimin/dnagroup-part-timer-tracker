@@ -386,7 +386,7 @@ let SUB=load(K_SUB,{}), CLOSED=load(K_CLOSED,{}), CUSTOM_NAMES=load(K_NAMES,[]),
 let EDIT=false;
 
 /* ---------------- CLOUD (Supabase) or DEMO (localStorage) ---------------- */
-const SB_URL=(window.SUPABASE_URL||"").trim().replace(/\/$/,"");
+const SB_URL=(window.SUPABASE_URL||"").trim().replace(/\/+$/,"").replace(/\/rest\/v1$/,"");
 const SB_KEY=(window.SUPABASE_ANON_KEY||"").trim();
 const CLOUD = SB_URL.startsWith("http") && SB_KEY.length>20;
 async function sbFetch(path,opts){
